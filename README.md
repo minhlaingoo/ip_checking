@@ -1,5 +1,8 @@
 import requests
 import ipaddress
+import time
+from tqdm import tqdm
+import os
 
 API_KEY = '3ef0881bf4cd648fb05e6fc4b9cfa0d36c80dbf2932a23ef70ab6e8fe1e48e522fdd12a6e2bac053'
 INPUT_FILE = 'input.txt'
@@ -37,20 +40,34 @@ def expand_ips_from_file(filename):
                 print(f"Invalid IP or network: {line}")
     return ip_list
 
-ip_list = expand_ips_from_file(INPUT_FILE)
+def load_existing_ips(output_file):
+    seen = set()
+    if os.path.exists(output_file):
+        with open(output_file, 'r') as f:
+            for line in f:
+                if line.strip():
+                    seen.add(line.split()[0])
+    return seen
 
-with open(OUTPUT_FILE, 'w') as out:
-    for ip in ip_list:
+ip_list = expand_ips_from_file(INPUT_FILE)
+seen_ips = load_existing_ips(OUTPUT_FILE)
+
+with open(OUTPUT_FILE, 'a') as out:
+    for ip in tqdm(ip_list, desc="Checking IPs"):
+        ip_str = str(ip)
+        if ip_str in seen_ips:
+            continue
         try:
             result = check_ip(ip)
             data = result.get('data', {})
             score = data.get('abuseConfidenceScore', 'N/A')
             reports = data.get('totalReports', 'N/A')
-            out.write(f"{ip} - Abuse Score: {score} - Reports: {reports}\n")
-            print(f"Checked {ip} -> Score: {score}")
+            out.write(f"{ip_str} - Abuse Score: {score} - Reports: {reports}\n")
+            print(f"Checked {ip_str} -> Score: {score}")
         except Exception as e:
-            out.write(f"{ip} - Error: {str(e)}\n")
-            print(f"Error checking {ip}: {e}")
+            out.write(f"{ip_str} - Error: {str(e)}\n")
+            print(f"Error checking {ip_str}: {e}")
+        time.sleep(1)
 
 
 ### virus total ###
