@@ -4,7 +4,7 @@ import time
 from tqdm import tqdm
 import os
 
-API_KEY = '3ef0881bf4cd648fb05e6fc4b9cfa0d36c80dbf2932a23ef70ab6e8fe1e48e522fdd12a6e2bac053'
+API_KEY = 'TYPE API HERE'
 INPUT_FILE = 'input.txt'
 OUTPUT_FILE = 'abuseip_results.txt'
 
