@@ -51,3 +51,70 @@ with open(OUTPUT_FILE, 'w') as out:
         except Exception as e:
             out.write(f"{ip} - Error: {str(e)}\n")
             print(f"Error checking {ip}: {e}")
+
+
+### virus total ###
+
+import requests
+import time
+import re
+
+VT_API_KEY = 'TYPE API KEY HERE'
+INPUT_FILE = 'input.txt'
+OUTPUT_FILE = 'output.txt'
+
+headers = {
+    'x-apikey': VT_API_KEY
+}
+
+def detect_type(value):
+    if re.match(r'^[0-9a-fA-F]{32}$', value):      # MD5
+        return "files"
+    elif re.match(r'^[0-9a-fA-F]{40}$', value):     # SHA1
+        return "files"
+    elif re.match(r'^[0-9a-fA-F]{64}$', value):     # SHA256
+        return "files"
+    elif all(c.isdigit() or c == '.' for c in value):  # IP
+        return "ip_addresses"
+    else:
+        return "domains"
+
+def vt_check(value, vt_type):
+    url = f"https://www.virustotal.com/api/v3/{vt_type}/{value}"
+    response = requests.get(url, headers=headers)
+    return response.json()
+
+with open(INPUT_FILE, 'r') as f:
+    items = [line.strip() for line in f if line.strip()]
+
+with open(OUTPUT_FILE, 'w') as out:
+    for item in items:
+        vt_type = detect_type(item)
+        try:
+            result = vt_check(item, vt_type)
+
+            if 'data' in result and 'attributes' in result['data']:
+                stats = result['data']['attributes'].get('last_analysis_stats', {})
+                malicious = stats.get('malicious', 0)
+                suspicious = stats.get('suspicious', 0)
+                harmless = stats.get('harmless', 0)
+
+                out.write(f"{item} ({vt_type}) - Malicious: {malicious}, Suspicious: {suspicious}, Harmless: {harmless}\n")
+                print(f"Checked {item} -> Malicious: {malicious}")
+            elif 'error' in result:
+                message = result['error'].get('message', 'Unknown error')
+                out.write(f"{item} ({vt_type}) - Error: {message}\n")
+                print(f"Error: {item} -> {message}")
+            else:
+                out.write(f"{item} ({vt_type}) - Error: Unexpected response format\n")
+                print(f"Error: {item} -> Unexpected format")
+
+        except Exception as e:
+            out.write(f"{item} ({vt_type}) - Exception: {str(e)}\n")
+            print(f"Exception checking {item}: {e}")
+
+        time.sleep(15)
+
+
+
+
